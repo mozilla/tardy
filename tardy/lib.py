@@ -79,7 +79,7 @@ class Stackato(object):
             # No git info, so init.
             print 'Failed, creating...'
             cmd('ssh "git init && git remote add origin {0}"'
-                .format(self.data['git']))
+                .format(self.data['git']['repo']))
 
         print 'Pulling...'
         # If people want pull to be something different got for that here.
