@@ -85,3 +85,7 @@ class Stackato(object):
         # If people want pull to be something different got for that here.
         cmd('ssh "git {0}"'
             .format(self.data['git'].get('pull', 'pull origin master')))
+
+        print 'Restarting...'
+        cmd('stop')
+        cmd('start')
