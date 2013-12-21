@@ -4,33 +4,37 @@ might not be relevant to you.
 
 *This is very much a work in progress*.
 
+To install::
+
+  pip install tardy
+
 Tardy is a Python library with a command line interface.
 
-* `-f` or `--file`: points to a JSON file that contains configuration.
+* ``-f`` or ``--file``: points to a JSON file that contains configuration.
 
-* `-d` or `--dump`: dumps the contents of the Tardy configuration (which is
+* ``-d`` or ``--dump``: dumps the contents of the Tardy configuration (which is
   just a JSON file) that contains a list of all the instances created by Tardy.
 
-* `-t` or `--test`: doesn't actually execute commands, just prints.
+* ``-t`` or ``--test``: doesn't actually execute commands, just prints.
 
-* `-g` or `--git`: used when you aren't running Tardy from the source of the
-  project. It will create a `.tardy.repos` directory and check the source out
+* ``-g`` or ``--git``: used when you aren't running Tardy from the source of the
+  project. It will create a ``.tardy.repos`` directory and check the source out
   into that directory. This is used when you have one project that requires
   two or three other projects.
 
-* `-l` or `--last`: prints out the uuid of the last stackato instance created
+* ``-l`` or ``--last``: prints out the uuid of the last stackato instance created
   for that project.
 
-* `-a` or `--action`: one of `update`, `delete`, `create`, `restart`. Will do:
+* ``-a`` or ``--action``: one of ``update``, ``delete``, ``create``, ``restart``. Will do:
 
-  * `create`: creates an instance and stores into the Tardy configuration.
+  * ``create``: creates an instance and stores into the Tardy configuration.
 
-  * `update`: ssh's into each stackato instance and does a git pull then
+  * ``update``: ssh's into each stackato instance and does a git pull then
     restarts the instance.
 
-  * `restart`: stops and starts each stackato instance.
+  * ``restart``: stops and starts each stackato instance.
 
-  * `delete`: deletes each stackato instance.
+  * ``delete``: deletes each stackato instance.
 
 For each stackato instance you want to create, you will need a configuration
 file::
@@ -51,20 +55,23 @@ file::
     }
   }
 
-* `stackato`: config for stackato
+* ``stackato``: config for stackato
 
-  * `pre`: a list of commands to run prior to upload to stackato, each command
+  * ``pre``: a list of commands to run prior to upload to stackato, each command
     is passed the env variables as dictionary for python strings. The variable
-    `URL` is also passed, this is the stackato URL instance.
+    ``URL`` is also passed, this is the stackato URL instance.
 
-  * `git`: the git repo of this instance.
+  * ``git``: the git repo of this instance.
 
-* `git`: config for git
+* ``git``: config for git
 
-  * `repo`: the git repo of this instance.
+  * ``repo``: the git repo of this instance.
 
-Example 1: Creating an integration test between two services
-------------------------------------------------------------
+Examples
+--------
+
+Creating an integration test between two services
+=================================================
 
 In this case we have a repo that contains integration tests between two other
 repos. This will create a unique instance of each repo on stackato and then run
@@ -93,8 +100,8 @@ this at once::
 
 For more see https://github.com/andymckay/solitude-zippy
 
-Example 2: Updating stackato when unit tests pass
--------------------------------------------------
+Updating stackato when unit tests pass
+======================================
 
 In this case we are checking out a repo and running unit tests on a repo. This
 will occur on each github commit. If the tests pass then it will update the
