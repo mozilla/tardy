@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='tardy',
-    version='0.1.5',
+    version='0.1.6',
     description='Update services on stackato',
     author='Andy McKay',
     author_email='andym@mozilla.com',

@@ -140,7 +140,9 @@ class Stackato(Base):
 
     @property
     def uid_(self):
-        return '{0}-{1}'.format(self.data['name'], self.id_)
+        if self.id_:
+            return '{0}-{1}'.format(self.data['name'], self.id_)
+        return self.data['name']
 
     @property
     def cmd_prefix(self):
@@ -229,28 +231,36 @@ class Stackato(Base):
             del self.storage['apps'][self.storage['apps'].index(i)]
 
     def update(self):
+        if not self.storage['apps']:
+            # Assume you are updating something not temporary.
+            self._update(None)
+            return
+
         for id_ in self.storage['apps']:
-            self.id_ = id_
-            self.msg('Updating')
-            if not self.data.get('git'):
-                raise ValueError('Need a value for git in the tardy config.')
+            self._update(id_)
 
-            self.msg('Ensure git config')
-            try:
-                self.cmd('ssh "git rev-parse"')
-            except subprocess.CalledProcessError:
-                # No git info, so init.
-                self.msg('Failed, creating')
-                self.cmd('ssh "git init && git remote add origin {0}"'
-                         .format(self.data['git']['repo']))
+    def _update(self, id_):
+        self.id_ = id_
+        self.msg('Updating')
+        if not self.data.get('git'):
+            raise ValueError('Need a value for git in the tardy config.')
 
-            self.msg('Pulling')
-            # If people want pull to be something different go for that here.
-            self.cmd('ssh "git {0}"'
-                     .format(self.data['git'].get('pull',
-                                                  'pull origin master')))
+        self.msg('Ensure git config')
+        try:
+            self.cmd('ssh "git rev-parse"')
+        except subprocess.CalledProcessError:
+            # No git info, so init.
+            self.msg('Failed, creating')
+            self.cmd('ssh "git init && git remote add origin {0}"'
+                     .format(self.data['git']['repo']))
 
-            self._restart()
+        self.msg('Pulling')
+        # If people want pull to be something different go for that here.
+        self.cmd('ssh "git {0}"'
+                 .format(self.data['git'].get('pull',
+                                              'pull origin master')))
+
+        self._restart()
 
     def _restart(self):
         self.msg('Restarting')
