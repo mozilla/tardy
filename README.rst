@@ -11,6 +11,7 @@ To install::
 Tardy is a Python library with a command line interface.
 
 * ``-f`` or ``--file``: points to a JSON file that contains configuration.
+  Optional, if not specified uses ``tardy.json``
 
 * ``-d`` or ``--dump``: dumps the contents of the Tardy configuration (which is
   just a JSON file) that contains a list of all the instances created by Tardy.
@@ -29,12 +30,14 @@ Tardy is a Python library with a command line interface.
 
   * ``create``: creates an instance and stores into the Tardy configuration.
 
-  * ``update``: ssh's into each stackato instance and does a git pull then
-    restarts the instance.
+  * ``update``: creates a new instance, maps the urls over to it, then deletes
+    the old one. Doing so changes the name of the instance each time.
 
   * ``restart``: stops and starts each stackato instance.
 
   * ``delete``: deletes each stackato instance.
+
+* ``-q`` or ``--quiet``: less output onto the console.
 
 For each stackato instance you want to create, you will need a configuration
 file::
@@ -125,5 +128,39 @@ instance on stackato::
 
   # In this case the jenkins user has stackato credentials to hit the server.
   tardy -f tardy.json -a upgrade
+
+Example output::
+
+    [master] hello $ tardy -a update -q
+    hello: Updating
+    Command: stackato apps --json
+    hello: New app id: hello
+    hello: Old app id: tardy-update-hello
+    Command: stackato apps --json
+    Command: stackato map tardy-update-hello original-hello.paas.allizom.org
+    Command: stackato push hello --as=hello --no-prompt --no-start
+    Command: stackato start hello --no-prompt --no-tail
+    Command: stackato map hello hello.paas.allizom.org
+    Command: stackato unmap tardy-update-hello hello.paas.allizom.org
+    Command: stackato apps --json
+    Command: stackato delete tardy-update-hello
+    hello: Note: the app has been renamed to hello
+
+    [master] hello $ tardy -a update -q
+    hello: Updating
+    Command: stackato apps --json
+    hello: New application id is: tardy-update-hello
+    hello: Old application id is: hello
+    Command: stackato apps --json
+    Command: stackato map hello original-hello.paas.allizom.org
+    Command: stackato push hello --as=tardy-update-hello --no-prompt --no-start
+    Command: stackato start tardy-update-hello --no-prompt --no-tail
+    Command: stackato map tardy-update-hello hello.paas.allizom.org
+    Command: stackato unmap hello hello.paas.allizom.org
+    Command: stackato apps --json
+    Command: stackato unmap tardy-update-hello tardy-update-hello.paas.allizom.org
+    Command: stackato delete hello
+    hello: Note: the app has been renamed to tardy-update-hello
+
 
 For more see https://github.com/mozilla/zippy
