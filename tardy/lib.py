@@ -17,18 +17,23 @@ repos_filename = '.tardy.repos'
 
 class Config(object):
 
-    def __init__(self, filename=None, test=False):
+    def __init__(self, filename=None, test=False, colour=False, quiet=False):
         self.config = None
         self.filename = filename
+        self.colour = colour
+
         self.config = json.load(open(filename, 'r'))
         self.storage = Storage(uid=filename)
         self.storage.load()
 
         self.stackato = Stackato(self.config['stackato'], self.storage)
+        self.stackato.quiet = quiet
         self.stackato.test = test
 
-        self.git = Git(self.config['git'], self.storage)
-        self.git.test = test
+        if 'git' in self.config:
+            self.git = Git(self.config['git'], self.storage)
+            self.git.quiet = quiet
+            self.git.test = test
 
     def save(self):
         self.storage.save()
@@ -59,8 +64,9 @@ class Storage(object):
 
 class Base(object):
 
+    quiet = False
+
     def msg(self, text):
-        print
         print '%s%s:%s %s' % (CYAN, self.uid_, RESET, text)
 
     def cmd(self, command, prefix_override=None):
@@ -77,10 +83,11 @@ class Base(object):
                 raise
         else:
             res = None
-        if res:
+        if res and not self.quiet:
             print res
-        print ' %sCompleted in:%s %ss' % (GREEN, RESET,
-                                          time.time() - start)
+        if not self.quiet:
+            print ' %sCompleted in:%s %ss' % (GREEN, RESET,
+                                              time.time() - start)
         return res
 
     def json(self, command, prefix_override=None):
@@ -97,8 +104,9 @@ class Base(object):
                 raise
         else:
             res = None
-        print ' %sCompleted in:%s %ss' % (GREEN, RESET,
-                                          time.time() - start)
+        if not self.quiet:
+            print ' %sCompleted in:%s %ss' % (GREEN, RESET,
+                                              time.time() - start)
         return json.loads(res)
 
 
@@ -140,10 +148,14 @@ class Stackato(Base):
 
     @property
     def uid_(self):
-        return '{0}-{1}'.format(self.data['name'], self.id_)
+        if self.id_:
+            return '{0}-{1}'.format(self.data['name'], self.id_)
+        return self.data['name']
 
     @property
     def cmd_prefix(self):
+        if self.cwd == os.getcwd():
+            return 'stackato'
         # If a clone is called, the cwd will change.
         return 'cd %s; stackato' % self.cwd
 
@@ -229,28 +241,62 @@ class Stackato(Base):
             del self.storage['apps'][self.storage['apps'].index(i)]
 
     def update(self):
+        if not self.storage['apps']:
+            # Assume you are updating something not temporary.
+            self._update(self.data['name'])
+            return
+
         for id_ in self.storage['apps']:
-            self.id_ = id_
-            self.msg('Updating')
-            if not self.data.get('git'):
-                raise ValueError('Need a value for git in the tardy config.')
+            self._update(id_)
 
-            self.msg('Ensure git config')
-            try:
-                self.cmd('ssh "git rev-parse"')
-            except subprocess.CalledProcessError:
-                # No git info, so init.
-                self.msg('Failed, creating')
-                self.cmd('ssh "git init && git remote add origin {0}"'
-                         .format(self.data['git']['repo']))
+    def app(self, id_):
+        res = self.json('apps')
+        for r in res:
+            if r['name'] == id_:
+                return r
 
-            self.msg('Pulling')
-            # If people want pull to be something different go for that here.
-            self.cmd('ssh "git {0}"'
-                     .format(self.data['git'].get('pull',
-                                                  'pull origin master')))
+    def names(self):
+        res = self.json('apps')
+        return [r['name'] for r in res]
 
-            self._restart()
+    def _update(self, id_):
+        self.msg('Updating')
+
+        names = self.names()
+        new_id = 'tardy-update-{0}'.format(id_)
+        old_id = id_
+        target = '{0}.{1}'.format(id_, domain)
+        if new_id in names:
+            if id_ in names:
+                raise ValueError('Renaming {0} back to {1} will not work '
+                                 'because it already exists.'
+                                 .format(new_id, id_))
+            new_id, old_id = old_id, new_id
+
+        self.msg('New application id is: {0}'.format(new_id))
+        self.msg('Old application id is: {0}'.format(old_id))
+        uris = self.app(old_id)['uris']
+        if len(uris) > 1:
+            raise ValueError('Cowardly failure, multiple uris mapped to: {0}. '
+                             'This occurs if a previous update fails.'
+                             .format(id_))
+        uri = uris[0]
+
+        self.cmd('map {0} original-{1}'.format(old_id, uri))
+        self.cmd('push {0} --as={1} --no-prompt --no-start'
+                 .format(id_, new_id))
+        self.cmd('start {0} --no-prompt --no-tail'.format(new_id))
+        self.cmd('map {0} {1}'.format(new_id, uri))
+        self.cmd('unmap {0} {1}'.format(old_id, uri))
+
+        uris = self.app(new_id)['uris']
+        for uri in uris:
+            if uri != target:
+                self.cmd('unmap {0} {1}'.format(new_id, uri))
+
+        self.cmd('delete {0}'.format(old_id))
+        self.msg('Note: the app has been renamed to {0}'.format(new_id))
+
 
     def _restart(self):
         self.msg('Restarting')

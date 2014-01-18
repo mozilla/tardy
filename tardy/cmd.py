@@ -6,12 +6,14 @@ from lib import Config, Storage
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('-f', '--file')
+    parser.add_argument('-f', '--file', default='tardy.json')
     parser.add_argument('-d', '--dump', action='store_true')
     parser.add_argument('-a', '--action')
     parser.add_argument('-t', '--test', action='store_true')
     parser.add_argument('-g', '--git', action='store_true')
     parser.add_argument('-l', '--last', action='store_true')
+    parser.add_argument('-n', '--nocolour', action='store_true')
+    parser.add_argument('-q', '--quiet', action='store_true')
     result = parser.parse_args()
 
     if result.dump:
@@ -34,7 +36,8 @@ def main():
     if not result.file:
         raise ValueError('--file must be specified')
 
-    config = Config(filename=result.file, test=result.test)
+    config = Config(filename=result.file, test=result.test,
+                    colour=result.nocolour, quiet=result.quiet)
     if result.git:
         config.git.clone()
         config.stackato.cwd = config.git.repo
